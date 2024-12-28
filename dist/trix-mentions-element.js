@@ -4,7 +4,7 @@ import textFieldSelectionPosition from './text-field-selection-position';
 import { TrixEditorElementAdapter, assertTrixEditorElement, buildTrixAttachment } from './trix-editor-element';
 import { getFrameElementById, setSearchParam } from './turbo';
 const states = new WeakMap();
-const DEBOUNCE_DELAY = 150;
+const DEBOUNCE_DELAY = 300;
 class TrixMentionsExpander {
     constructor(expander) {
         this.expander = expander;

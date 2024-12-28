@@ -129,7 +129,7 @@ function setSearchParam(element, src, name, value) {
 }
 
 const states = new WeakMap();
-const DEBOUNCE_DELAY = 150;
+const DEBOUNCE_DELAY = 300;
 class TrixMentionsExpander {
     constructor(expander) {
         this.expander = expander;
