@@ -27,7 +27,7 @@ type Key = {
 
 const states = new WeakMap()
 
-const DEBOUNCE_DELAY = 150
+const DEBOUNCE_DELAY = 300
 
 class TrixMentionsExpander {
   expander: TrixMentionsElement
