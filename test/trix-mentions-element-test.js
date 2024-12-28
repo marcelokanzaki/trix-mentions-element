@@ -61,7 +61,7 @@ describe('trix-mentions element', function () {
       })
 
       input.focus()
-      triggerInput(input, ':')
+      await triggerInput(input, ':')
       await waitForAnimationFrame()
       assert.exists(expander.querySelector('ul'))
 
@@ -82,11 +82,11 @@ describe('trix-mentions element', function () {
         assert.equal('[[', key)
         receivedText.push(text)
       })
-      triggerInput(input, '[[')
-      triggerInput(input, '[[a')
-      triggerInput(input, '[[ab')
-      triggerInput(input, '[[abc')
-      triggerInput(input, '[[abcd')
+      await triggerInput(input, '[[')
+      await triggerInput(input, '[[a')
+      await triggerInput(input, '[[ab')
+      await triggerInput(input, '[[abc')
+      await triggerInput(input, '[[abcd')
 
       assert.deepEqual(receivedText, expectedText)
     })
@@ -103,7 +103,7 @@ describe('trix-mentions element', function () {
       })
 
       input.focus()
-      triggerInput(input, ':')
+      await triggerInput(input, ':')
       await waitForAnimationFrame()
       assert.equal(input.getAttribute('role'), 'combobox')
       assert.equal(input.getAttribute('aria-multiline'), 'false')
@@ -142,7 +142,7 @@ describe('trix-mentions element', function () {
         })
 
         input.focus()
-        triggerInput(input, '#')
+        await triggerInput(input, '#')
         await waitForAnimationFrame()
 
         item.click()
@@ -170,7 +170,7 @@ describe('trix-mentions element', function () {
         })
 
         input.focus()
-        triggerInput(input, '#', true)
+        await triggerInput(input, '#', true)
         await waitForAnimationFrame()
 
         assert.equal(option1.getAttribute('aria-selected'), 'true')
@@ -182,7 +182,7 @@ describe('trix-mentions element', function () {
         assert.equal(option1.getAttribute('aria-selected'), 'false')
         assert.equal(option2.getAttribute('aria-selected'), 'true')
 
-        triggerInput(input, 'z', true)
+        await triggerInput(input, 'z', true)
         await waitForAnimationFrame()
         option1.click()
         await waitForAnimationFrame()
@@ -190,6 +190,41 @@ describe('trix-mentions element', function () {
         const value = input.editor.getDocument()
         assert.equal(value.toString().includes('z'), false)
       })
+    })
+
+    it('debounces input events', async function () {
+      const expander = document.querySelector('trix-mentions')
+      const input = expander.querySelector('trix-editor')
+      let changeCount = 0
+
+      expander.addEventListener('trix-mentions-change', () => {
+        changeCount++
+      })
+
+      triggerInput(input, ':')
+      triggerInput(input, ':a')
+      triggerInput(input, ':ab')
+      assert.equal(changeCount, 0)
+
+      await triggerInput(input, ':abc')
+      assert.equal(changeCount, 1)
+    })
+
+    it('preserves value after debounce', async function () {
+      const expander = document.querySelector('trix-mentions')
+      const input = expander.querySelector('trix-editor')
+      let lastText = ''
+
+      expander.addEventListener('trix-mentions-change', event => {
+        lastText = event.detail.text
+      })
+
+      triggerInput(input, ':')
+      triggerInput(input, ':h')
+
+      await triggerInput(input, ':hi')
+
+      assert.equal(lastText, 'hi')
     })
   })
 
@@ -236,12 +271,12 @@ describe('trix-mentions element', function () {
         assert.equal('[[', key)
         receivedText.push(text)
       })
-      triggerInput(input, '[[')
-      triggerInput(input, '[[a')
-      triggerInput(input, '[[ab')
-      triggerInput(input, '[[abc')
-      triggerInput(input, '[[abcd')
-      triggerInput(input, '[[abcd def')
+      await triggerInput(input, '[[')
+      await triggerInput(input, '[[a')
+      await triggerInput(input, '[[ab')
+      await triggerInput(input, '[[abc')
+      await triggerInput(input, '[[abcd')
+      await triggerInput(input, '[[abcd def')
 
       assert.deepEqual(receivedText, expectedText)
     })
@@ -321,7 +356,7 @@ describe('trix-mentions element', function () {
       })
 
       input.focus()
-      triggerInput(input, ':')
+      await triggerInput(input, ':')
       await waitForAnimationFrame()
 
       assert(menu.isConnected)
@@ -348,7 +383,7 @@ describe('trix-mentions element', function () {
       const expander = document.querySelector('trix-mentions')
       const input = document.querySelector('trix-editor')
       const frame = document.querySelector('turbo-frame')
-      triggerInput(input, ':a')
+      await triggerInput(input, ':a')
       await waitForAnimationFrame()
 
       assert.equal(expandURL(frame.getAttribute('src')), expandURL('/path?query=a'))
@@ -365,7 +400,7 @@ describe('trix-mentions element', function () {
       const expander = document.querySelector('trix-mentions')
       const input = document.querySelector('trix-editor')
       const frame = document.querySelector('turbo-frame')
-      triggerInput(input, ':a')
+      await triggerInput(input, ':a')
       await waitForAnimationFrame()
 
       assert.equal(expandURL(frame.getAttribute('src')), expandURL('/path?c=d&query=a'))
@@ -381,7 +416,7 @@ describe('trix-mentions element', function () {
       `
       const input = document.querySelector('trix-editor')
       const frame = document.querySelector('turbo-frame')
-      triggerInput(input, ':a')
+      await triggerInput(input, ':a')
       await waitForAnimationFrame()
 
       assert.equal(frame.getAttribute('src'), '/path')
@@ -403,7 +438,7 @@ describe('trix-mentions element', function () {
       const component = document.querySelector('wrapper-component')
       const input = component.shadowRoot.querySelector('trix-editor')
       input.focus()
-      triggerInput(input, '@a')
+      await triggerInput(input, '@a')
       await waitForAnimationFrame()
       assert.exists(component.shadowRoot.querySelector('ul'))
     })
@@ -416,15 +451,17 @@ function once(element, eventName) {
   })
 }
 
-function triggerInput(input, value, onlyAppend = false) {
+async function triggerInput(input, value, onlyAppend = false) {
   const editor = input.editor
   const selectionEnd = editor.getPosition()
   const selectedRange = onlyAppend ? selectionEnd : [0, selectionEnd]
+  const debounceDeley = window.TrixMentionsElement.DEBOUNCE_DELAY + 50
 
   editor.setSelectedRange(selectedRange)
   editor.insertString(value)
 
-  return input.dispatchEvent(new InputEvent('input'))
+  input.dispatchEvent(new InputEvent('input'))
+  await new Promise(resolve => setTimeout(resolve, debounceDeley))
 }
 
 function triggerKeydown(element, key) {

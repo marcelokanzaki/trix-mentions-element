@@ -27,6 +27,8 @@ type Key = {
 
 const states = new WeakMap()
 
+const DEBOUNCE_DELAY = 150
+
 class TrixMentionsExpander {
   expander: TrixMentionsElement
   menu: [HTMLElement, boolean] | null
@@ -41,6 +43,7 @@ class TrixMentionsExpander {
   justPasted: boolean
   lookBackIndex: number
   interactingWithList: boolean
+  private debounceTimeout: number | null
 
   constructor(expander: TrixMentionsElement) {
     this.expander = expander
@@ -60,6 +63,7 @@ class TrixMentionsExpander {
     expander.addEventListener('input', this.oninput, {capture: true})
     expander.addEventListener('keydown', this.onkeydown)
     expander.addEventListener('focusout', this.onblur)
+    this.debounceTimeout = null
   }
 
   get input(): TrixEditorInput {
@@ -74,6 +78,10 @@ class TrixMentionsExpander {
     this.expander.removeEventListener('input', this.oninput, {capture: true})
     this.expander.removeEventListener('keydown', this.onkeydown)
     this.expander.removeEventListener('focusout', this.onblur)
+    if (this.debounceTimeout) {
+      window.clearTimeout(this.debounceTimeout)
+      this.debounceTimeout = null
+    }
   }
 
   dismissMenu() {
@@ -192,23 +200,30 @@ class TrixMentionsExpander {
       return
     }
 
-    const match = this.findMatch()
-    if (match) {
-      this.match = match
-      const menu = await this.notifyProviders(match)
+    if (this.debounceTimeout) {
+      window.clearTimeout(this.debounceTimeout)
+    }
 
-      // Text was cleared while waiting on async providers.
-      if (!this.match) return
+    this.debounceTimeout = window.setTimeout(async () => {
+      const match = this.findMatch()
+      if (match) {
+        this.match = match
+        const menu = await this.notifyProviders(match)
 
-      if (menu) {
-        this.activate(match, menu)
+        // Text was cleared while waiting on async providers.
+        if (!this.match) return
+
+        if (menu) {
+          this.activate(match, menu)
+        } else {
+          this.deactivate()
+        }
       } else {
+        this.match = null
         this.deactivate()
       }
-    } else {
-      this.match = null
-      this.deactivate()
-    }
+      this.debounceTimeout = null
+    }, DEBOUNCE_DELAY)
   }
 
   findMatch(): Match | void {
@@ -276,6 +291,8 @@ class TrixMentionsExpander {
   }
 }
 export default class TrixMentionsElement extends HTMLElement {
+  static DEBOUNCE_DELAY = DEBOUNCE_DELAY
+
   get keys(): Key[] {
     const keysAttr = this.getAttribute('keys')
     const keys = keysAttr ? keysAttr.split(' ') : []
