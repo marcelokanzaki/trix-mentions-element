@@ -16,7 +16,7 @@
     "pretest": "npm run build && rollup -c rollup.config.test.js",
     "test": "karma start test/karma.config.cjs",
     "prepublishOnly": "npm run build",
-    "postinstall": "npm run build"
+    "postinstall": "npm install && npm run build"
   },
   "keywords": [
     "auto-complete",
